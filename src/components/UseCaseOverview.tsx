@@ -11,6 +11,9 @@ import LanguageSwitcher from './LanguageSwitcher';
 interface UseCaseOverviewProps {
   useCases: UseCase[];
   onBackToHome: () => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }
 
 const departments: Array<'All' | Department> = [
@@ -34,7 +37,7 @@ const statuses: Array<'All' | UseCaseStatus> = [
   'Archived'
 ];
 
-export default function UseCaseOverview({ useCases, onBackToHome }: UseCaseOverviewProps) {
+export default function UseCaseOverview({ useCases, onBackToHome, isLoading = false, error = null, onRefresh }: UseCaseOverviewProps) {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<'All' | Department>('All');
@@ -155,25 +158,51 @@ export default function UseCaseOverview({ useCases, onBackToHome }: UseCaseOverv
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-4 text-gray-600">
-          {t('overview.showing')} {filteredUseCases.length} {t('overview.of')} {useCases.length} {t('overview.useCases')}
-        </div>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+            <div>
+              <p className="text-red-800 font-medium">Error loading use cases</p>
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+            </div>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
 
-        {filteredUseCases.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-xl text-gray-500">{t('overview.noResults')}</p>
-            <p className="text-gray-400 mt-2">{t('overview.tryAdjusting')}</p>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#E30613]"></div>
+            <p className="mt-4 text-gray-600">Loading use cases...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredUseCases.map((useCase) => (
-              <UseCaseCard
-                key={useCase.id}
-                useCase={useCase}
-                onClick={() => setSelectedUseCase(useCase)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="mb-4 text-gray-600">
+              {t('overview.showing')} {filteredUseCases.length} {t('overview.of')} {useCases.length} {t('overview.useCases')}
+            </div>
+
+            {filteredUseCases.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-xl text-gray-500">{t('overview.noResults')}</p>
+                <p className="text-gray-400 mt-2">{t('overview.tryAdjusting')}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredUseCases.map((useCase) => (
+                  <UseCaseCard
+                    key={useCase.id}
+                    useCase={useCase}
+                    onClick={() => setSelectedUseCase(useCase)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 
