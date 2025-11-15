@@ -12,19 +12,18 @@
  * All environment variables are loaded from .env file and validated here
  */
 export const env = {
-  supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL,
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-  },
   app: {
     name: 'Tesa AI Hub',
     version: '1.0.0',
     environment: import.meta.env.MODE || 'development',
   },
+  api: {
+    baseUrl: 'http://localhost:3001/api',
+  },
 } as const;
 
 /**
- * Supabase Database Configuration
+ * Database Configuration
  * Connection settings and table names for the database
  */
 export const database = {
@@ -41,13 +40,9 @@ export const database = {
  * Centralized endpoint definitions for all API calls
  */
 export const api = {
-  supabase: {
-    baseUrl: env.supabase.url,
-    endpoints: {
-      useCases: '/rest/v1/use_cases',
-      auth: '/auth/v1',
-      storage: '/storage/v1',
-    },
+  baseUrl: env.api.baseUrl,
+  endpoints: {
+    useCases: '/use-cases',
   },
 } as const;
 
@@ -83,7 +78,6 @@ export const constants = {
   languages: ['en', 'de'] as const,
   defaultLanguage: 'de',
 
-  // Status colors for UI
   statusColors: {
     Live: 'bg-green-600',
     MVP: 'bg-blue-600',
@@ -94,7 +88,6 @@ export const constants = {
     Archived: 'bg-gray-400',
   },
 
-  // Default images for departments
   defaultImages: {
     Marketing: 'https://images.pexels.com/photos/265087/pexels-photo-265087.jpeg?auto=compress&cs=tinysrgb&w=800',
     'R&D': 'https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=800',
@@ -104,7 +97,6 @@ export const constants = {
     Operations: 'https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
 
-  // Validation rules
   validation: {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     url: /^https?:\/\/.+/,
@@ -161,32 +153,14 @@ export const externalLinks = {
  * @throws {Error} If required environment variables are missing
  */
 export function validateConfig(): void {
-  const required = [
-    { key: 'VITE_SUPABASE_URL', value: env.supabase.url },
-    { key: 'VITE_SUPABASE_ANON_KEY', value: env.supabase.anonKey },
-  ];
-
-  const missing = required.filter(({ value }) => !value);
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.map(({ key }) => key).join(', ')}`
-    );
-  }
+  return;
 }
 
 /**
  * Exports a utility function to get the full API endpoint URL
  */
 export function getApiUrl(endpoint: string): string {
-  return `${api.supabase.baseUrl}${endpoint}`;
-}
-
-/**
- * Configuration validator (run at startup)
- */
-if (import.meta.env.MODE !== 'test') {
-  validateConfig();
+  return `${api.baseUrl}${endpoint}`;
 }
 
 export default {

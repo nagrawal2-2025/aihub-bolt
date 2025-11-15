@@ -1,86 +1,153 @@
-import { supabase } from '../config/database';
+import { query } from '../config/database';
 import { UseCase, CreateUseCaseDTO, UpdateUseCaseDTO } from '../models/UseCase';
 
 export class UseCaseService {
   async getAllUseCases(): Promise<UseCase[]> {
-    const { data, error } = await supabase
-      .from('use_cases')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to fetch use cases: ${error.message}`);
-    }
-
-    return data as UseCase[];
+    const result = await query('SELECT * FROM use_cases ORDER BY created_at DESC');
+    return result.rows as UseCase[];
   }
 
   async getUseCaseById(id: string): Promise<UseCase | null> {
-    const { data, error } = await supabase
-      .from('use_cases')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    const result = await query('SELECT * FROM use_cases WHERE id = $1', [id]);
 
-    if (error) {
-      throw new Error(`Failed to fetch use case: ${error.message}`);
+    if (result.rowCount === 0) {
+      return null;
     }
 
-    return data as UseCase | null;
+    return result.rows[0] as UseCase;
   }
 
   async createUseCase(useCaseData: CreateUseCaseDTO): Promise<UseCase> {
-    const newUseCase = {
-      ...useCaseData,
-      related_use_case_ids: useCaseData.related_use_case_ids || [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const {
+      title,
+      short_description,
+      full_description,
+      department,
+      status,
+      owner_name,
+      owner_email,
+      image_url,
+      business_impact,
+      technology_stack,
+      internal_links,
+      tags,
+      related_use_case_ids,
+      application_url,
+    } = useCaseData;
 
-    const { data, error } = await supabase
-      .from('use_cases')
-      .insert([newUseCase])
-      .select()
-      .single();
+    const result = await query(
+      `INSERT INTO use_cases (
+        title, short_description, full_description, department, status,
+        owner_name, owner_email, image_url, business_impact, technology_stack,
+        internal_links, tags, related_use_case_ids, application_url, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+      RETURNING *`,
+      [
+        title,
+        short_description,
+        full_description,
+        department,
+        status,
+        owner_name,
+        owner_email,
+        image_url || null,
+        business_impact || null,
+        JSON.stringify(technology_stack),
+        JSON.stringify(internal_links),
+        JSON.stringify(tags),
+        JSON.stringify(related_use_case_ids || []),
+        application_url || null,
+      ]
+    );
 
-    if (error) {
-      throw new Error(`Failed to create use case: ${error.message}`);
-    }
-
-    return data as UseCase;
+    return result.rows[0] as UseCase;
   }
 
   async updateUseCase(id: string, updates: UpdateUseCaseDTO): Promise<UseCase | null> {
-    const updateData = {
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
 
-    const { data, error } = await supabase
-      .from('use_cases')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(`Failed to update use case: ${error.message}`);
+    if (updates.title !== undefined) {
+      fields.push(`title = $${paramIndex++}`);
+      values.push(updates.title);
+    }
+    if (updates.short_description !== undefined) {
+      fields.push(`short_description = $${paramIndex++}`);
+      values.push(updates.short_description);
+    }
+    if (updates.full_description !== undefined) {
+      fields.push(`full_description = $${paramIndex++}`);
+      values.push(updates.full_description);
+    }
+    if (updates.department !== undefined) {
+      fields.push(`department = $${paramIndex++}`);
+      values.push(updates.department);
+    }
+    if (updates.status !== undefined) {
+      fields.push(`status = $${paramIndex++}`);
+      values.push(updates.status);
+    }
+    if (updates.owner_name !== undefined) {
+      fields.push(`owner_name = $${paramIndex++}`);
+      values.push(updates.owner_name);
+    }
+    if (updates.owner_email !== undefined) {
+      fields.push(`owner_email = $${paramIndex++}`);
+      values.push(updates.owner_email);
+    }
+    if (updates.image_url !== undefined) {
+      fields.push(`image_url = $${paramIndex++}`);
+      values.push(updates.image_url);
+    }
+    if (updates.business_impact !== undefined) {
+      fields.push(`business_impact = $${paramIndex++}`);
+      values.push(updates.business_impact);
+    }
+    if (updates.technology_stack !== undefined) {
+      fields.push(`technology_stack = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.technology_stack));
+    }
+    if (updates.internal_links !== undefined) {
+      fields.push(`internal_links = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.internal_links));
+    }
+    if (updates.tags !== undefined) {
+      fields.push(`tags = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.tags));
+    }
+    if (updates.related_use_case_ids !== undefined) {
+      fields.push(`related_use_case_ids = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.related_use_case_ids));
+    }
+    if (updates.application_url !== undefined) {
+      fields.push(`application_url = $${paramIndex++}`);
+      values.push(updates.application_url);
     }
 
-    return data as UseCase | null;
+    if (fields.length === 0) {
+      const result = await query('SELECT * FROM use_cases WHERE id = $1', [id]);
+      return result.rows[0] as UseCase || null;
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const result = await query(
+      `UPDATE use_cases SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    return result.rows[0] as UseCase;
   }
 
   async deleteUseCase(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('use_cases')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to delete use case: ${error.message}`);
-    }
-
-    return true;
+    const result = await query('DELETE FROM use_cases WHERE id = $1', [id]);
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
